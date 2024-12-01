@@ -35,6 +35,7 @@ class TranscriptionData():
         self.translate = translate
         self.language = language
         self.diarizate = diarizate
+        self.sessionId = None
 
     def appendData(self, receivedAudio: bytes):
         if self.curSeconds < 10:
@@ -87,6 +88,8 @@ class TranscriptionData():
                     raise WrongLanguage(
                         "Given language is not supported for translation."
                     )
+            elif key == 'session_id':
+                self.sessionId = value
     
 
     def incrementData(self):

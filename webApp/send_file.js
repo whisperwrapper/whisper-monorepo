@@ -1,27 +1,31 @@
 
 const { soundClient,
-        SoundRequest, 
-        SoundResponse, 
         TextMessage, 
-        SoundStreamResponse, 
-        SpeakerAndLine} = require('./consts.js')
+        TranscriptionRequest, 
+        TranslationRequest, 
+        TranscirptionLiveRequest, 
+        SoundResponse,
+        SoundStreamResponse,
+        SpeakerAndLineResponse} = require('./consts.js')
 
-const { button_register, button_login, button_getTranslation } = require('./authentication.js')
+const { recordInChunks } = require('./record.js')
 
 const _validFileExtensions = [".mp3", ".wav"];
 
 export function setupConnection() {
     connectionTest()
 
-    const send_button = document.getElementById('submit_file')
-    send_button.onclick = validateAndSend;
+    // const send_button = document.getElementById('submit_file')
+    // send_button.onclick = validateAndSend();
     //TODO: down from here are buttons from test.html
-//     const register = document.getElementById('register')
-//     register.onsubmit = button_register;
+    // const register = document.getElementById('register')
+    // register.onsubmit = transcribeLiveWeb;
 //     const login = document.getElementById('login')
 //     login.onsubmit = button_login;
 //     const getTransl = document.getElementById('getTranslation')
 //     getTransl.onsubmit = button_getTranslation;
+    let record = document.getElementById('record')
+    record.onclick = () => transcribeLiveWeb()
 }
 
 
@@ -140,6 +144,40 @@ function sendFile(file) { // Send file to the server and return the answer
             console.log(answer)
             console.log("Success! Answer should be visible in the console")
             return answer
+        })
+    }
+}
+
+
+async function getSessionId(request) {
+    return new Promise((resolve, reject) => {
+        soundClient.transcribeLiveWeb(request, {}, (err, response) => {
+            if (err) {
+                reject(`Could not establish connection with the server: code = ${err.code}, message = ${err.message}`);
+            } else {
+                resolve(response.getText());
+            }
+        });
+    });
+}
+
+
+async function transcribeLiveWeb() {
+    console.log("dzialam wgl lol")
+    let sessionId = await getSessionId(new TranscriptionRequest())
+    let metadata = {"session_id": sessionId}
+    console.log(metadata)
+    let recording = recordInChunks()
+    for await (const audioChunk of recording) {
+        console.log(`I'm sending the request`)
+        let request = new TranscriptionRequest()
+        request.setSoundData(audioChunk.byteArray)
+        await soundClient.transcribeLiveWeb(request, metadata, (err, response) => {
+            if (err) {
+                console.log(`Could not establish connection with the server: code = ${err.code}, message = ${err.message}`)
+                return
+            }
+            console.log(`I got the response ${response.getText()}`)
         })
     }
 }
