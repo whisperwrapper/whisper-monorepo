@@ -29,11 +29,12 @@ func (g *MockJWTGenerator) generate(email string) (string, error) {
 	return "something", nil
 }
 
-func (db *MockDb) getUserPassword(email string) (string, error) {
+func (db *MockDb) getUserInfo(email string) (string, string, error) {
 	if db.UserPassword != "" {
-		return HashPassword(db.UserPassword)
+		hashedPassword, err := HashPassword(db.UserPassword)
+		return "", hashedPassword, err
 	}
-	return "", sql.ErrNoRows
+	return "", "", sql.ErrNoRows
 }
 
 func (db *MockDb) isUserInDatabase(email string) (bool, error) {
@@ -48,7 +49,22 @@ func (db *MockDb) getUserTranscriptionHistory(email string) (pgx.Rows, error) {
 	return nil, nil
 }
 
-func (db *MockDb) saveTranscription(a string, b string) {
+func (db *MockDb) saveTranscription(a string, b string, c bool, d string) {
+}
+
+func (db *MockDb) deleteTranscription(a int, b string) error {
+	return nil
+}
+
+func (db *MockDb) editTranscription(a int, b string, c string) error {
+	return nil
+}
+
+func (db *MockDb) saveDiarization(text []string, speaker []string, username string, language string) {
+
+}
+func (db *MockDb) saveTranslation(text string, username string, is_translation bool, language string, translated_text string, translation_language string) {
+
 }
 
 func compareLoginResponse(a *pb.LoginResponse, b *pb.LoginResponse) bool {

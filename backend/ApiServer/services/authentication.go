@@ -38,7 +38,7 @@ type JWTGenerator struct {
 	PrivateKeyPath string
 }
 
-func (g *JWTGenerator) generate(username string) (string, error) {
+func (g *JWTGenerator) generate(database_id string) (string, error) {
 	var t *jwt.Token
 
 	key, err := loadPrivateECDSAKeyFromFile(g.PrivateKeyPath)
@@ -47,7 +47,7 @@ func (g *JWTGenerator) generate(username string) (string, error) {
 	}
 
 	claims := UserClaims{
-		username,
+		database_id,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 			Issuer:    "krzysztof",
@@ -106,17 +106,18 @@ func comparePasswords(hashedPassword string, plainPassword string) bool {
 	return err == nil
 }
 
-func (s *AuthenticationServer) checkUserCredentials(email string, password string) bool {
-	password_hash, err := s.Db.getUserPassword(email)
+func (s *AuthenticationServer) checkUserCredentials(username string, password string) (string, bool) {
+	database_id, password_hash, err := s.Db.getUserInfo(username)
 	if err != nil {
-		return false
+		return "", false
 	}
-	return comparePasswords(password_hash, password)
+	return database_id, comparePasswords(password_hash, password)
 }
 
 func (s *AuthenticationServer) Login(ctx context.Context, in *pb.UserCredits) (*pb.LoginResponse, error) {
-	if s.checkUserCredentials(in.Username, in.Password) {
-		token, _ := s.JwtGenerator.generate(in.Username)
+	database_id, is_login_succesfull := s.checkUserCredentials(in.Username, in.Password)
+	if is_login_succesfull {
+		token, _ := s.JwtGenerator.generate(database_id)
 		return &pb.LoginResponse{Successful: true, JWT: token}, nil
 
 	}
@@ -129,13 +130,15 @@ func HashPassword(password string) (string, error) {
 }
 
 func (s *AuthenticationServer) Register(ctx context.Context, in *pb.UserCredits) (*pb.StatusResponse, error) {
-	if successful, err := s.Db.isUserInDatabase(in.Username); successful {
-		if err != nil {
-			return &pb.StatusResponse{Successful: false, Error: "Unknown error"}, nil
-		}
+
+	is_in_database, err := s.Db.isUserInDatabase(in.Username)
+	if err != nil {
+		return &pb.StatusResponse{Successful: false, Error: "Unknown error"}, err
+	}
+	if is_in_database {
 		return &pb.StatusResponse{Successful: false, Error: "User already registered"}, nil
 	}
-	err := s.Db.addUserToDatabase(in.Username, in.Password)
+	err = s.Db.addUserToDatabase(in.Username, in.Password)
 	if err != nil {
 		return &pb.StatusResponse{Successful: false, Error: "Database error"}, nil
 	}
@@ -232,6 +235,9 @@ func (s *AuthenticationServer) EditTranscription(ctx context.Context, in *pb.New
 	}
 
 	username, err := GetUserNameFromMetadata(md)
+	if err != nil {
+		return nil, err
+	}
 
 	err = s.Db.editTranscription(int(in.Id), username, in.Content)
 
@@ -250,7 +256,9 @@ func (s *AuthenticationServer) DeleteTranscription(ctx context.Context, in *pb.I
 	}
 
 	username, err := GetUserNameFromMetadata(md)
-
+	if err != nil {
+		return nil, err
+	}
 	err = s.Db.deleteTranscription(int(in.Id), username)
 	if err == nil {
 		return &pb.StatusResponse{Successful: true, Error: ""}, err
