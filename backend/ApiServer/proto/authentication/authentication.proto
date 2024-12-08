@@ -8,15 +8,36 @@ import "google/protobuf/timestamp.proto";
 service ClientService {
     rpc Login (UserCredits) returns (LoginResponse) {};
     rpc Register (UserCredits) returns (StatusResponse) {};
-    rpc GetTranslation (Empty) returns (stream TextHistory) {};
-    rpc EditTranscription(NewContent) returns (StatusResponse) {};
+
+    rpc GetTranslation(QueryParamethers) returns (stream TranslationHistory) {};
+    rpc EditTranslation(NewTranslation) returns (stream TranslationHistory) {}
+    rpc DeleteTranslation(Id) returns(StatusResponse) {}
+
+    rpc GetTranscription(QueryParamethers) returns (stream TranscriptionHistory) {};
+    rpc EditTranscription(NewTranscription) returns (StatusResponse) {};
     rpc DeleteTranscription(Id) returns (StatusResponse) {};
+
+    rpc GetDiarization(QueryParamethers) returns (stream DiarizationHistory) {};
+    rpc EditDiarization(NewDiarization) returns (StatusResponse) {};
+    rpc DeleteDiarization(Id) returns (StatusResponse) {}
 }
 
-message TextHistory {
+message TranscriptionHistory {
     string transcription = 1;
     google.protobuf.Timestamp created_at = 2;
     int32 id = 3;
+}
+
+message TranslationHistory {
+    int32 id = 1;
+    string transcription = 2;
+    string translation = 3;
+}
+
+message DiarizationHistory {
+    int32 id = 1;
+    repeated string speaker = 2;
+    repeated string line = 3;
 }
 
 message UserCredits {
@@ -38,11 +59,26 @@ message Id {
     int32 id = 1;
 }
 
-message NewContent {
+message NewTranscription {
     int32 id = 1;
     string content = 2;
 }
 
-message Empty {
+message NewTranslation {
+    int32 id = 1;
+    string transcription = 2;
+    string translation = 3;
+}
 
+message NewDiarization {
+    int32 id = 1;
+    repeated string  line = 2; 
+    repeated string speaker = 3;
+}
+
+
+message QueryParamethers {
+    google.protobuf.Timestamp start_time = 1;
+    google.protobuf.Timestamp end_time = 2;
+    int32 limit = 3;
 }
